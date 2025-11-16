@@ -1,37 +1,120 @@
-// create mini VR canvas
-const vrCanvas = document.createElement('canvas');
-vrCanvas.style.width = '300px';
-vrCanvas.style.height = '200px';
-document.body.appendChild(vrCanvas);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR + VR Mini View Demo</title>
 
-// setup renderer
-const vrRenderer = new THREE.WebGLRenderer({ canvas: vrCanvas });
-vrRenderer.setSize(300, 200);
+  <!-- three.js core -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+  <!-- ar button -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/webxr/ARButton.js"></script>
+  <!-- orbit controls for mini VR view -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/controls/OrbitControls.js"></script>
 
-// setup scene
+  <style>
+    body { margin: 0; overflow: hidden; font-family: sans-serif; }
+    #arContainer { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+    #vrButton {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 16px;
+      background: #2196f3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 10;
+    }
+    #vrMiniView { position: absolute; bottom: 10px; right: 10px; border: 2px solid #fff; }
+  </style>
+</head>
+<body>
+  <div id="arContainer"></div>
+  <button id="vrButton">Open VR Mini View</button>
+  <canvas id="vrMiniView" width="300" height="200"></canvas>
+
+<script type="module">
+// ===== AR Scene Setup =====
+const container = document.getElementById("arContainer");
+const scene = new THREE.Scene();
+
+// camera for AR (ignored, AR uses device camera)
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
+
+// renderer
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.xr.enabled = true;
+container.appendChild(renderer.domElement);
+
+// light
+const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+light.position.set(0.5, 1, 0.25);
+scene.add(light);
+
+// add a simple AR object (green cube)
+const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+const cube = new THREE.Mesh(geometry, material);
+cube.position.set(0, 0, -0.5);
+scene.add(cube);
+
+// ar button
+document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+
+// ===== VR Mini View Setup =====
+const vrCanvas = document.getElementById("vrMiniView");
+const vrRenderer = new THREE.WebGLRenderer({ canvas: vrCanvas, antialias: true });
+vrRenderer.setSize(vrCanvas.width, vrCanvas.height);
+
+// create VR scene
 const vrScene = new THREE.Scene();
 
-// camera with perspective
-const vrCamera = new THREE.PerspectiveCamera(70, 300/200, 0.01, 100);
+// camera for mini VR view
+const vrCamera = new THREE.PerspectiveCamera(70, vrCanvas.width / vrCanvas.height, 0.01, 20);
+vrCamera.position.set(0, 0.3, 1);
 
-// orbit controls
+// orbit controls for interaction
 const controls = new THREE.OrbitControls(vrCamera, vrCanvas);
 controls.enableZoom = true;
 controls.enablePan = true;
 
-// add light
+// light for mini VR scene
 vrScene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
 
-// add objects (e.g., box)
-const box = new THREE.Mesh(
-  new THREE.BoxGeometry(0.1,0.1,0.1),
-  new THREE.MeshStandardMaterial({ color: 0x00ff00 })
-);
-vrScene.add(box);
+// add same cube to mini VR scene
+const vrCube = cube.clone();
+vrScene.add(vrCube);
 
-// animation loop
-function animateVR() {
-  requestAnimationFrame(animateVR);
-  vrRenderer.render(vrScene, vrCamera);
+// ===== Animation Loop =====
+function animate() {
+  renderer.setAnimationLoop(() => {
+    cube.rotation.x += 0.01;
+    cube.rotation.y += 0.01;
+    renderer.render(scene, camera);
+  });
+
+  // vr mini view loop
+  function animateVR() {
+    requestAnimationFrame(animateVR);
+    vrCube.rotation.x += 0.01;
+    vrCube.rotation.y += 0.01;
+    controls.update();
+    vrRenderer.render(vrScene, vrCamera);
+  }
+  animateVR();
 }
-animateVR();
+animate();
+
+// ===== VR Mini View Button =====
+const vrButton = document.getElementById("vrButton");
+vrButton.addEventListener('click', () => {
+  vrCanvas.style.display = 'block';
+});
+
+</script>
+</body>
+</html>
