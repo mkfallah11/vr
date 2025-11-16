@@ -1,0 +1,37 @@
+// create mini VR canvas
+const vrCanvas = document.createElement('canvas');
+vrCanvas.style.width = '300px';
+vrCanvas.style.height = '200px';
+document.body.appendChild(vrCanvas);
+
+// setup renderer
+const vrRenderer = new THREE.WebGLRenderer({ canvas: vrCanvas });
+vrRenderer.setSize(300, 200);
+
+// setup scene
+const vrScene = new THREE.Scene();
+
+// camera with perspective
+const vrCamera = new THREE.PerspectiveCamera(70, 300/200, 0.01, 100);
+
+// orbit controls
+const controls = new THREE.OrbitControls(vrCamera, vrCanvas);
+controls.enableZoom = true;
+controls.enablePan = true;
+
+// add light
+vrScene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
+
+// add objects (e.g., box)
+const box = new THREE.Mesh(
+  new THREE.BoxGeometry(0.1,0.1,0.1),
+  new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+);
+vrScene.add(box);
+
+// animation loop
+function animateVR() {
+  requestAnimationFrame(animateVR);
+  vrRenderer.render(vrScene, vrCamera);
+}
+animateVR();
